@@ -1,3 +1,5 @@
+""""""
+
 from PyQt6.QtCore import QSize, Qt
 from PyQt6.QtWidgets import (
     QApplication,
@@ -14,12 +16,18 @@ from solve_window import SolveWindow
 
 
 class MainWindow(QMainWindow):
+    """
+    Main Window of Custom Maze Solver. Allows user to create a maze (presented as a grid) with preferred
+    dimensions. Once 'Solve!' button is pressed, a new sub window will appear for user to solve the puzzle.
+    """
     def __init__(self):
+        """Initializes main window with grid dimensions, layout and widgets"""
         super().__init__()
 
         self.setWindowTitle("Solve Custom Maze")
 
         page_layout = QVBoxLayout()
+        self.instructions_layout = QVBoxLayout()
         self.input_layout = QHBoxLayout()
         self.maze_layout = QGridLayout()
         self.bottom_layout = QHBoxLayout()
@@ -36,19 +44,36 @@ class MainWindow(QMainWindow):
 
         self.start_btn = QPushButton("Set Start")
         self.end_btn = QPushButton("Set End")
+        self.warning_label = QLabel("")
+        self.warning_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self.ui_components()
 
+        page_layout.addLayout(self.instructions_layout)
         page_layout.addLayout(self.input_layout)
         page_layout.addLayout(self.maze_layout)
         page_layout.addLayout(self.bottom_layout)
+        page_layout.addWidget(self.warning_label)
 
         widget = QWidget()
         widget.setLayout(page_layout)
-        self.setFixedSize(QSize(800, 700))
+        self.setFixedSize(QSize(800, 850))
         self.setCentralWidget(widget)
 
-    """Creates input boxes and initial grid"""
     def ui_components(self):
+        """Creates input boxes and initial grid as well as instructions and other label widgets"""
+        # header info
+        title = QLabel("Custom Maze Solver")
+        title.setContentsMargins(60, 0, 60, 10)
+        self.instructions_layout.addWidget(title)
+
+        instructions = QLabel("Adjust the height and width of your maze below (max 20). \nClick on the cells "
+                              "to create barriers for your maze and add the start and end \n"
+                              "by clicking on either the start/end button and selecting your desired cell"
+                              " immediately after. \nOnce you have completed your maze design, click 'Solve!' to "
+                              "try and solve the puzzle or have the answer generated for you.")
+        instructions.setContentsMargins(60, 0, 60, 10)
+        self.instructions_layout.addWidget(instructions)
+
         # height components
         height_label = QLabel("Height")
         height_label.setFixedSize(50, 30)
@@ -101,28 +126,29 @@ class MainWindow(QMainWindow):
         reset_btn.clicked.connect(self.reset_maze)
         self.input_layout.addWidget(reset_btn)
 
-        self.input_layout.setAlignment(Qt.AlignmentFlag.AlignTop)
+        self.input_layout.setAlignment(Qt.AlignmentFlag.AlignTop | Qt.AlignmentFlag.AlignCenter)
 
-        # maze component
-        cell = QPushButton("hi")
-        cell.setFixedSize(self.cell_size, self.cell_size)
-        self.maze_layout.addWidget(cell, 0, 0)
+        # maze layout
+        self.create_grid()
+        self.maze_layout.setRowStretch(20, 20)
         self.maze_layout.setColumnStretch(20, 20)
-        self.maze_layout.setContentsMargins(0, 0, 0, 0)
         self.maze_layout.setSpacing(0)
 
-        # alignment is off
-        self.maze_layout.setAlignment(Qt.AlignmentFlag.AlignVCenter)
+        self.maze_layout.setAlignment(Qt.AlignmentFlag.AlignCenter)
 
         # solve button
         solve_btn = QPushButton("Solve!")
         solve_btn.setFixedSize(90, 40)
         solve_btn.clicked.connect(self.solve_maze)
         self.bottom_layout.addWidget(solve_btn)
+
         self.bottom_layout.setAlignment(Qt.AlignmentFlag.AlignCenter)
 
-    """Sets new width and calls create_grid function to update grid"""
     def width_changed(self, val):
+        """Sets new width and calls create_grid function to update grid
+        Args:
+            val: value of width obtained from spin box
+        """
         old_width = self.width
         self.width = val
 
@@ -130,8 +156,11 @@ class MainWindow(QMainWindow):
             self.create_grid(True)
         self.create_grid()
 
-    """Sets new height and calls create_grid function to update grid"""
     def height_changed(self, val):
+        """Sets new height and calls create_grid function to update grid
+        Args:
+            val: value of height obtained from spin box
+        """
         old_height = self.height
         self.height = val
 
@@ -140,12 +169,21 @@ class MainWindow(QMainWindow):
         self.create_grid()
 
     def set_start(self, checked):
+        """Setter for start toggle
+        Args:
+            checked: Boolean obtained when clicking start button
+        """
         self.toggle_start = checked
 
     def set_end(self, checked):
+        """Setter for end toggle
+        Args:
+            checked: Boolean obtained when clicking end button
+        """
         self.toggle_end = checked
 
     def clear_flags(self):
+        """Clears both start and end flags"""
         if self.start_flag:
             self.clear_start()
 
@@ -153,6 +191,7 @@ class MainWindow(QMainWindow):
             self.clear_end()
 
     def clear_end(self):
+        """Clears end flag"""
         end_cell = self.widget_grid[self.end_flag[0]][self.end_flag[1]]
         end_cell.setChecked(False)
         end_cell.setStyleSheet("background-color : white")
@@ -160,24 +199,31 @@ class MainWindow(QMainWindow):
         self.end_flag = None
 
     def clear_start(self):
+        """Clears start flag"""
         start_cell = self.widget_grid[self.start_flag[0]][self.start_flag[1]]
         start_cell.setChecked(False)
         start_cell.setStyleSheet("background-color : white")
 
         self.start_flag = None
 
-    """Creates a grid based on the height and width values. If old values are greater than 
-    new values, then the grid is cleared before creating grid"""
     def create_grid(self, clear=False):
+        """Creates a grid based on the height and width values. If old values are greater than
+        new values, then the grid is cleared before creating grid
+        Args:
+            clear: defaulted to False, passed in True if grid was cleared
+        """
+        # if grid is cleared
         if clear:
             for i in reversed(range(self.maze_layout.count())):
                 self.maze_layout.itemAt(i).widget().deleteLater()
 
             self.widget_grid = []
 
+        # reinitialize widget and maze grid
         self.widget_grid = [[0 for x in range(self.width)] for y in range(self.height)]
         self.maze_grid = [[False for x in range(self.width)] for y in range(self.height)]
 
+        # create a button for each cell in the grid
         for y in range(0, self.height):
             for x in range(0, self.width):
                 cell = QPushButton()
@@ -190,20 +236,23 @@ class MainWindow(QMainWindow):
                 cell.setChecked(self.maze_grid[y][x])
                 self.maze_layout.addWidget(cell, y, x)
 
-    """Resets size of grid"""
     def reset_maze(self):
+        """Resets size of grid"""
         self.height = 1
         self.width = 1
         self.create_grid(True)
 
-    """Toggles cell color and value (either maze barrier or not)"""
     def toggle_cell(self, checked):
+        """Toggles cell color and value (either maze barrier or not)
+        Args:
+            checked: boolean passed when clicking button
+        """
         sending_cell = self.sender().objectName().split(",")
         width = int(sending_cell[0])
         height = int(sending_cell[1])
 
         if self.toggle_start is True:
-            if (width, height) != self.end_flag:
+            if (height, width) != self.end_flag:
                 # unselect previous flag
                 if self.start_flag:
                     previous_cell = self.widget_grid[self.start_flag[0]][self.start_flag[1]]
@@ -214,27 +263,37 @@ class MainWindow(QMainWindow):
 
                 # set start flag
                 self.start_flag = (height, width)
+                self.maze_grid[self.start_flag[0]][self.start_flag[1]] = False
                 self.widget_grid[self.start_flag[0]][self.start_flag[1]].setStyleSheet("background-color : green")
                 self.start_btn.setChecked(False)
                 self.toggle_start = False
+            else:
+                self.warning_label.setText("**Cannot have start and end flag at same position. Unselect/move end flag"
+                                           " or choose a different position**")
 
         elif self.toggle_end is True:
-            if (width, height) != self.toggle_start:
-                if self.end_flag:
+            if (height, width) != self.start_flag:
+                # unselect previous flag
+                if self.end_flag or self.maze_grid[height][width]:
                     previous_flag = self.widget_grid[self.end_flag[0]][self.end_flag[1]]
                     previous_flag.setChecked(False)
                     previous_flag.setStyleSheet("background-color : white")
                     self.maze_grid[self.end_flag[0]][self.end_flag[1]] = False
 
                 self.end_flag = (height, width)
+                self.maze_grid[self.end_flag[0]][self.end_flag[1]] = False
                 self.widget_grid[self.end_flag[0]][self.end_flag[1]].setStyleSheet("background-color : red")
                 self.end_btn.setChecked(False)
                 self.toggle_end = False
+            else:
+                self.warning_label.setText("**Cannot have start and end flag at same position. Unselect/move start flag"
+                                           " or choose a different position**")
 
+        # player is placing regular maze barrier
         else:
-            if (width, height) == self.start_flag:
+            if (height, width) == self.start_flag:
                 self.clear_start()
-            elif (width, height) == self.end_flag:
+            elif (height, width) == self.end_flag:
                 self.clear_end()
             else:
                 self.widget_grid[height][width].setStyleSheet("background-color : black")
@@ -242,14 +301,15 @@ class MainWindow(QMainWindow):
                 if checked is False:
                     self.widget_grid[height][width].setStyleSheet("background-color : white")
 
-    """Solve Maze"""
     def solve_maze(self):
+        """Determines if maze meets conditions (must have start and finish). If met, a new sub window is opened
+        to solve the maze"""
         if self.start_flag and self.end_flag:
             self.open_solve = SolveWindow(self.maze_grid, self.start_flag, self.end_flag)
             self.open_solve.show()
+            self.warning_label.setText("")
         else:
-            # print label, must have start and finish
-            pass
+            self.warning_label.setText("**Maze must have start and finish**")
 
 
 app = QApplication([])
